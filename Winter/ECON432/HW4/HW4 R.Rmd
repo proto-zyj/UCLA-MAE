@@ -1,0 +1,468 @@
+---
+title: "ECON 424 HW4 R Exericises"
+author: "YUANJIAN ZHOU"
+date: "Feb 22,2020"
+output:
+  html_document:
+    theme: united
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/zyj37/Desktop/MAE/Winter/ECON 433/Homework")
+library(tidyverse)
+```
+
+# A
+
+## 1
+
+```{r}
+ma1 = function(theta) {
+  # generate
+  ma_model = list(ma = theta)
+  set.seed(1)
+  ma1 = arima.sim(ma_model, n = 250, mean = 0, sd = 0.01) + 0.05 # simulated series
+  ma1_acf_theoretical = ARMAacf(ma = theta, lag.max = 20) # theoretical ACF
+  ma1_acf_sample = acf(ma1, lag.max = 20, plot = F)$acf # sample ACF
+  
+  # plot
+  par(mfrow = c(3, 1))
+  plot(ma1,
+       ylab = "Yt",
+       main =  str_c("MA(1) process with theta = ", theta))
+  plot(
+    1:21,
+    ma1_acf_theoretical,
+    type = "h",
+    col = "blue",
+    main = str_c("Theoretical ACF of MA(1) ：theta = ", theta),
+    xlab = "lag",
+    ylab = "rho"
+  )
+  abline(h = 0)
+  plot(
+    1:21,
+    ma1_acf_sample,
+    type = "h",
+    col = "blue",
+    main = str_c("Sample ACF of MA(1) ：theta = ", theta),
+    xlab = "lag",
+    ylab = "rho"
+  )
+  abline(h = 0)
+}
+```
+
+### (a)
+
+- MA(1) with $\theta = 0.5$
+```{r}
+ma1(0.5)
+```
+
+- MA(1) with $\theta = 0.9$
+```{r}
+ma1(0.9)
+```
+
+- MA(1) with $\theta = 0.99$
+```{r}
+ma1(-0.9)
+```
+
+### (b)
+- The simulated series behaves well, there is no much time dependence, and the sample ACF shows the same pattern with theoretical ACF: only has a statistically significant non-zero value at lag = 1.
+
+## 2
+```{r}
+# generate
+ar1 = function(phi) {
+  ar_model = list(ar = phi)
+  set.seed(46)
+  mu = 0.05
+  ar1 = arima.sim(ar_model, n = 250, mean = 0, sd = 0.1) + mu
+  ar1_acf_theoretical = ARMAacf(ar = phi, lag.max = 20)
+  ar1_acf_sample = acf(ar1, lag.max = 20, plot = F)$acf
+  
+#plot
+  par(mfrow = c(3, 1))
+  plot(ar1,
+       ylab = "Yt",
+       main =  str_c("AR(1) process with phi = ",  phi))
+  plot(
+    1:21,
+    ar1_acf_theoretical,
+    type = "h",
+    col = "blue",
+    main = str_c("Theoretical ACF of MA(1) ：phi = ", phi),
+    xlab = "lag",
+    ylab = "rho"
+  )
+  abline(h = 0)
+  plot(
+    1:21,
+    ar1_acf_sample,
+    type = "h",
+    col = "blue",
+    main = str_c("Sample ACF of AR(1) ：phi = ", phi),
+    xlab = "lag",
+    ylab = "rho"
+  )
+  abline(h = 0)
+}
+```
+
+### (a)
+
+- AR(1) with $\phi = 0$
+```{r}
+ar1(0)
+```
+
+- AR(1) with $\phi = 0.5$
+```{r}
+ar1(0.5)
+```
+
+- AR(1) with $\phi = 0.9$
+```{r}
+ar1(0.9)
+```
+
+- AR(1) with $\phi = 0.99$
+```{r}
+ar1(0.99)
+```
+
+### (b)
+- With the increase of $\phi$, the time dependence is also increasing, which can be seen both from the time-series plot and ACF plot. As we can see, the sample ACF is quite similar to the theoretical ones. AR(1) with $\phi = 0.99$ is close to non-stationary series.
+
+# B
+
+```{r echo=TRUE, warning=FALSE}
+library(zoo)
+library(PerformanceAnalytics)
+library(tseries)
+library(car)
+```
+
+## 0
+- VBLTX: This index fund offers a low-cost, diversified approach to bond investing, providing broad exposure to U.S. investment-grade bonds with maturities of more than ten years, with 60% in coporate bond and 40% in government bond. Because of the long maturities, this index is sensitive to changes of interest rate.
+
+- FMAGX: This fund normally invests in common stocks, like MSFT and AAPL. It will invest in either "growth" stock or "value" stock or both. Because it mainly invests in stocks, it is sensitive to stock market risk.
+
+- SBUX: This the stock of Starbucks Corporation, which together with its subsidiaries, operates as a roaster, marketer, and retailer of specialty coffee worldwide.
+
+### preparation
+```{r message=FALSE, warning=FALSE}
+# use api to get historic data from yahoo
+get_price = function(tick) {
+  result = suppressWarnings(
+    get.hist.quote(
+      instrument = tick,
+      quote = "AdjClose",
+      provider = "yahoo",
+      start = "1998-01-01", 
+      end = "2009-12-31",     
+      compression = "m",
+      retclass = "zoo"
+    )
+  )
+  return(result)
+}
+
+
+VBLTX = get_price("VBLTX")
+FMAGX = get_price("FMAGX")
+SBUX  = get_price("SBUX")
+data_price = merge.zoo(VBLTX, FMAGX, SBUX) # merge zoo objects with same index
+colnames(data_price) = c("VBLTX", "FMAGX", "SBUX")
+# change index to Month-Year format, like Mar 1995
+index(data_price) = as.yearmon(index(data_price), "%B%y")
+# rt = lnpt - lnpt-1
+data_ccreturn = diff(log(data_price))
+```
+
+## 1
+
+### (a)
+```{r}
+plot(data_ccreturn,
+     main = "Monthly CC Return",
+     xlab = "time",
+     col = "purple")
+plot(
+  data_ccreturn,
+  plot.type = "single",
+  main = "Monthly CC Return",
+  xlab = "time",
+  ylab = "return",
+  col = c("red", "black", "green"),
+  lwd = 2
+)
+legend(
+  "bottom",
+  legend = c("VBLTX", "FMAGX", "SBUX"),
+  col = c("red", "black", "green"),
+  lwd = 2
+)
+```
+
+- The plots suggest that FMAGX and SBUX has a positive correlation, while VBLTX has a negative correlation with these two. Towards the end of 2008 and the start of 2009, all three assets went down, and then recovered
+
+### (b)
+```{r}
+data_ccreturn_cum = cumsum(data_ccreturn)
+plot(
+  data_ccreturn_cum,
+  plot.type = "single",
+  main = "Monthly Cumulative CC Return",
+  xlab = "time",
+  ylab = "return",
+  col = c("red", "black", "green"),
+  lwd = 2
+)
+legend(
+  "topleft",
+  legend = c("VBLTX", "FMAGX", "SBUX"),
+  col = c("red", "black", "green"),
+  lwd = 2
+)
+
+```
+
+- From the plots, we can see that SBUX has a highest cumulative cc return after 2001. Besides, the cumulative cc return of VBLTX is more stable than others, and there seems to exist a positive relationship between the cumulative cc return of VBLTX and FMAGX after 2003.
+
+- Over the investment horizon, SBUX gave the best future value, FMAGX gave the worst one.
+
+
+### (c)
+```{r}
+data_ccreturn_m = as.matrix(data_ccreturn) # some basic function do not work for dataframe
+
+fourplots = function(tick) {
+  par(mfrow = c(2, 2))
+  data = data_ccreturn_m[, tick]
+  #histogram
+  hist(
+    data,
+    main = "Histogram",
+    xlab = tick,
+    probability = T,
+    col = "purple"
+  )
+  
+  # boxplot
+  boxplot(data,
+          main = "Boxplot",
+          col = "purple",
+          xlab = tick)
+  
+  # density plot
+  plot(
+    density(data),
+    type = "l",
+    main = "Denstiy Plot",
+    xlab = "monthly cc return",
+    ylab = "probability",
+    col = "purple"
+  )
+  
+  # qqplot
+  qqPlot( ~ data,
+          col = "purple",
+          ylab = "sample quantitles",
+          main = "QQ plot")
+}
+```
+
+- VBLTX
+```{r}
+fourplots("VBLTX")
+```
+
+- The return distribution of VBLTX looks like normal distribution  despite of another small peak. According to normal QQ-plot, it is similar to normal distribution while having long tails.
+
+- FMAGX
+```{r}
+fourplots("FMAGX")
+```
+
+- The distribution of return of FMAGX just has a peak and shape is similar to normal distribution, but it has a long left tail, which can also be found in the QQ plot. 
+
+- SBUX
+```{r}
+fourplots("SBUX")
+```
+
+- Similar to FMAGX, SBUX has a normal-like shape while having a long left-tail. 
+
+- Comparison between distributions
+```{r}
+boxplot(data_ccreturn_m, col = "purple", main = "Comparison of returns")
+```
+
+- Comparing the distrbution of 3 assets, we find that they have similar median, while SBUX has a largest variance, and VBLTX has a smallest variance. 
+
+### (d)
+```{r}
+summary(data_ccreturn)
+apply(data_ccreturn, 2, mean)
+apply(data_ccreturn, 2, var)
+apply(data_ccreturn, 2, sd)
+apply(data_ccreturn, 2, skewness)
+apply(data_ccreturn, 2, kurtosis, method = "moment")
+```
+
+- MEAN: SBUX>VBLTX>FMAGX.
+- VARIANCE, STANDARD DEVIATION: SBUX>FMAGX>VBLTX
+- SKEWNESS: 3 aseets are all negative-biased, FMAGX and SBUX are more severe than VBLTX.
+- KURTOSIS: 3 assets are all sharper than normal distribution, and FMAGX is the sharpest.
+- SBUX appears to be the riskest asset.
+
+### (e)
+
+```{r}
+data_ccreturn_annual = 12 * apply(data_ccreturn, 2, mean) # annual cc return
+data_sreturn_annual = exp(data_ccreturn_annual) - 1 # annual simple return
+print(data_ccreturn_annual)
+print(data_sreturn_annual)
+```
+- It suprises me that annual cc returns and simple returns are quite similar.
+
+
+### (f)
+```{r}
+sqrt(12) * apply(data_ccreturn, 2, sd) # annual cc return standard deviation
+```
+- The magnitude of the standard deviation is large according to the mean annual return.
+
+### (g)
+```{r}
+pairs(data_ccreturn, col = "purple")
+```
+
+- It seems that there is no relationship between VBLTX and FMGAX, between VBLTX and SBUX. And there is a moderate positive relationship between FMAGX and SBUX.
+
+### (h)
+```{r}
+cor(data_ccreturn_m)
+cov(data_ccreturn_m)
+```
+
+- Results are similar to last question, there is almost no linear relationship between VBLTX and FMAGX, between VBLTX and SBUX. And there is a moderate postive relationship between FMAGX and SBUX, which is about 0.4.
+
+
+### (i)
+```{r}
+acf(data_ccreturn$VBLTX, xlab = "VBLTX")
+acf(data_ccreturn$FMAGX, xlab = "FMAGX")
+acf(data_ccreturn$SBUX, xlab = "SBUX")
+```
+
+- Return of VBLTX appears to be not uncorrelated over time, because it has one peak at lag 2; FMGAX appears to be uncorrelated over time because no values go over 2 stand deviations, SBUX appears to have the largest time dependence.
+
+
+## 2
+
+### (a)
+- Because $\epsilon_{it}\sim N(0,\sigma_i^2)$, from CER model, we can get $R_{it}\sim N(\mu_i,\sigma_i^2)$, so we can get the estimates directly from descriptive statistics.
+
+```{r}
+mu_hat = apply(data_ccreturn, 2, mean)
+sigma2_hat = apply(data_ccreturn, 2, var)
+sigma_hat = apply(data_ccreturn, 2, sd)
+uni_stat = cbind(mu_hat, sigma2_hat, sigma_hat)
+
+cov_hat = cov(data_ccreturn)[lower.tri(cov(data_ccreturn))]
+cor_hat = cor(data_ccreturn)[lower.tri(cor(data_ccreturn))]
+bi_stat = cbind(cov_hat, cor_hat)
+rownames(bi_stat) = c("VBLTX,FMAGX", "VBLTX,SBUX", "FMAGX,SBUX")
+
+print(uni_stat)
+print(bi_stat)
+```
+- These estimates are estiamted using the descriptive statistics, so they are actually the same values, hence, comments are same as above questions: SBUX has the highest mean with the highest variance, and VBLTX has higher mean than FMAGX while having lower variance. What's more, there exists a postive relationship between FMAGX and SBUX.
+
+### (b)
+
+- Formula
+$$
+\begin{aligned}
+SE(\hat{\mu}) &= \frac{\hat{\sigma}}{\sqrt{T}}\\
+SE(\hat{\sigma}^2) &= \frac{\sqrt{2}\hat{\sigma}^2}{\sqrt{T}}\\
+SE(\hat{\sigma}) &=\frac{\hat{\sigma}}{\sqrt{2T}}\\
+SE(\hat{\rho}) &=\frac{1-\hat{\rho}^2}{\sqrt{T}}
+\end{aligned}
+$$
+
+```{r}
+period = nrow(data_ccreturn)
+se_mu_hat = sigma_hat / sqrt(period)
+se_sigma2_hat = sqrt(2) * sigma2_hat / sqrt(period)
+se_sigma_hat = sigma_hat / sqrt(2 * period)
+se_cor_hat = (1 - cor_hat ^ 2) / sqrt(period)
+uni_stat2 = cbind(se_mu_hat, se_sigma2_hat, se_sigma_hat)
+bi_stat2 = cbind(se_cor_hat)
+rownames(bi_stat2) = c("VBLTX,FMAGX", "VBLTX,SBUX", "FMAGX,SBUX")
+
+uni_stat = cbind(uni_stat, uni_stat2)
+bi_stat = cbind(bi_stat, bi_stat2)
+print(uni_stat)
+print(bi_stat)
+```
+
+- From the magnitude of the standard error and mean, we can conclude that $\hat{\mu}$ is not precise; $\hat{\sigma},\hat{\sigma}^2$, estimates for three assets are precise; for $\hat{\rho}$, only the correlation between FMAGX and SBUX is precise.
+
+### (c)
+-Formula
+$$
+C.I(\hat{\theta}) = \hat{\theta} \pm t_{1-\frac{\alpha}{2}}(T-1) * SE(\hat{\theta})
+$$
+
+
+```{r}
+freedom = period - 1
+
+ci = function(mu, se, q1, q2) {
+  lower = mu - qt(q1, freedom) * se
+  upper = mu + qt(q1, freedom) * se
+  lower2 = mu - qt(q2, freedom) * se
+  upper2 = mu + qt(q2, freedom) * se
+  ci_m = cbind(lower, upper, lower2, upper2)
+  colnames(ci_m) = c(str_c(c("lower_", "upper_", "lower_", "upper_"), c(1 - 2*(1 - q1), 1 - 2*(1 - q1), 1 - 2*(1 - q2), 1 - 2*(1 - q2))))
+  return (ci_m)
+}
+ci_mu = ci(uni_stat[, 1], uni_stat[, 4], 0.975, 0.995)
+ci_sigma2 = ci(uni_stat[, 2], uni_stat[, 5], 0.975, 0.995)
+ci_sigma = ci(uni_stat[, 3], uni_stat[, 6], 0.975, 0.995)
+ci_cor = ci(bi_stat[, 2], bi_stat[, 3], 0.975, 0.995)
+print(ci_mu)
+print(ci_sigma2)
+print(ci_sigma)
+print(ci_cor)
+```
+
+- We can get similar results as the above question. For $\mu$, c.i are very wide; for $\sigma^2, \sigma$, c.i is narrow for each aseet; for $\rho$, c.i is also so wide.
+
+
+### (d)
+When $r$ is the cc return, we can use Lemma 2:
+
+$$
+Lemma2: VAR(W_0) = W_0 * [e^{q^r} -1]
+$$
+
+```{r}
+W = 1e5
+VAR_0.05 = 1e5 * (exp(qnorm(0.05, mu_hat, sigma_hat)) - 1)
+VAR_0.01 = 1e5 * (exp(qnorm(0.01, mu_hat, sigma_hat)) - 1)
+print(VAR_0.05)
+print(VAR_0.01)
+```
+
+- We conclude that VBLTX has the least VaR.

@@ -1,0 +1,428 @@
+---
+title: "Homework 2"
+author: "YUANJIAN ZHOU"
+date: "Jan 24,2020"
+# date: '`r format(Sys.Date(), "%Y-%b-%d")`'
+output: 
+  html_document:
+    toc: TRUE
+    #number_sections: TRUE
+    theme: united
+    #highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/zyj37/Desktop/MAE/Winter/ECON 433/Homework")
+library(tidyverse)
+library(scales)
+```
+
+# 1 Part 1. Review Questions
+
+## 1.
+
+- $Pr(X<0.1)$ and $Pr(Y<0.1)$
+
+$$
+Pr(X<0.1) = \frac{X-a}{b-a}=\frac{0.1-0}{1-0}=0.1\\
+Pr(Y<0.1) = Pr(Y=0) = 0.5
+$$
+
+- $E(X)$,$Var(X)$,$E(Y)$ and $Var(Y)$
+
+$$
+E(X) = \frac{a+b}{2} = \frac{1}{2}\\
+Var(X) = \frac{(b-a)^{2}}{12}=\frac{1}{12}\\
+E(Y) = p = 0.5\\
+Var(Y) = p*(1-p) = 0.25
+$$
+
+- $E(0.3X+0.7Y)$ and $E(0.5X+0.5Y)$
+
+$$
+E(0.3X+0.7Y) = 0.3E(X)+0.7E(Y) = 0.3*0.5+0.7*0.5=0.5\\
+E(0.5X+0.5Y) = 0.5E(X)+0.5E(Y) = 0.5*0.5+0.5*0.5=0.5
+$$
+
+- For any $\alpha \in [0;1]$, $E(\alpha X + (1-\alpha)Y)$ 
+$$
+\begin{align*}
+E(\alpha X+(1-\alpha) Y) &= \alpha E(X)+(1-\alpha)E(Y)\\
+&= \alpha *0.5+ (1- \alpha)*0.5=0.5\\
+\end{align*}
+$$
+
+- Due to independence, COV(X,Y) = 0 and $E(\alpha X+(1-\alpha) Y) = 0.5$
+
+$$
+\begin{align*}
+VAR(\alpha X+(1-\alpha)Y) &= \alpha^2 VAR(X) + (1-\alpha)^2VAR(Y)=\frac{1}{12}\alpha^2 + (1-a)^2*\frac{1}{4}\\
+\frac{dVAR}{d\alpha} &= \frac{1}{6}\alpha + \frac{1}{2}\alpha - \frac{1}{2}\\
+\alpha &= \frac{3}{4}
+\end{align*}
+$$
+
+- So, I wil choose $\alpha$ = 0.75, because thus the variance will be the smaller. 
+
+## 2
+- $Pr(X<-1.96)$
+```{r}
+sprintf("Pr(X < -1.96) = %#.3f", pnorm(-1.96, 0, 1))
+```
+
+- $Pr(X>1.64)$
+```{r}
+sprintf("Pr(X > 1.64) = %#.3f", 1 - pnorm(1.64, 0, 1))
+```
+
+- $Pr(-0.5<X<0.5)$
+```{r}
+sprintf("Pr(-0.5 < X < 0.5) = %#.3f", pnorm(0.5, 0, 1) - pnorm(-0.5, 0, 1))
+```
+
+- $q_{0.01},q_{0.99}$
+```{r}
+sprintf("%s quantile is %#.3f", percent(0.01),qnorm(0.01,0,1))
+sprintf("%s quantile is %#.3f", percent(0.99),qnorm(0.99,0,1))
+```
+
+- $q_{0.05},q_{0.95}$
+```{r}
+sprintf("%s quantile is %#.3f", percent(0.05),qnorm(0.05,0,1))
+sprintf("%s quantile is %#.3f", percent(0.95),qnorm(0.95,0,1))
+```
+
+## 3
+```{r}
+# preparation
+mu.x = 0.05
+sigma.x = 0.1
+
+mu.y = 0.025
+sigma.y = 0.05
+
+vals = seq(-0.25, 0.35, length=150)
+df <- data.frame(vals, "X" = dnorm(vals, mu.x, sigma.x), "Y" = dnorm(vals, mu.y, sigma.y))
+
+# plot
+g <-  ggplot(data=df) + 
+  geom_line(aes(y = X, x = vals, color = "X"), size=1) +
+  geom_line(aes(y = Y, x = vals, color = "Y"), size=1) +
+  labs(colour = 'Distribution') + 
+  ylab("f(x)") +
+  xlab("x") +
+  ggtitle("Two Normal curves") +
+  theme(plot.title = element_text(hjust = 0.5))
+print(g)
+```
+
+- From the graph we can see that X has a higher mean and Y has a lower variance. That means that X has a higher return with a higher variance and Y has a lower return with a lower variance. So there exists a risk-return trade-off between the 2 stocks. 
+
+- Investment depends on the attitude towards risk, I am risk aversed, so I will invest in Y.
+
+
+## 4
+
+```{r}
+risk = function(q, cc = F, ES_cal = F, mu_r = 0.05, sigma_r = 0.12){
+    q_r = qnorm(q, mu_r, sigma_r)
+    set.seed(46)
+    r = rnorm(50000, mu_r, sigma_r)
+    if (cc == F) {
+      VaR = 100000 * q_r
+      L1 = 100000 * r
+    } else {
+      VaR = 100000 * (exp(q_r) - 1)
+      L1 = 100000 * (exp(r) - 1)
+    }
+      I = as.numeric(L1 <= VaR)
+      ES = mean(L1 * I) / mean(I)
+    if (!ES_cal){
+      return(sprintf("The %s VaR is %#.3f", percent(q), VaR))
+    } else{
+      return(sprintf("The simulated %s ES is %#.3f", percent(q), ES))
+    }
+}      
+```
+
+- $VaR_{0.01}$
+```{r}
+risk(0.01)
+```
+
+- $VaR_{0.05}$
+
+```{r}
+risk(0.05)
+```
+
+
+- $ES_{0.01}$
+```{r}
+risk(0.01, ES_cal = T)
+```
+
+- $ES_{0.05}$
+```{r}
+risk(0.05, ES_cal = T)
+```
+
+## 5
+
+- $VaR_{0.01}$
+```{r}
+risk(0.01, cc = T)
+```
+
+- $VaR_{0.05}$
+```{r}
+risk(0.05, cc = T)
+```
+
+
+- $ES_{0.01}$
+```{r}
+risk(0.01, cc = T, ES_cal = T)
+```
+
+- $ES_{0.05}$
+```{r}
+risk(0.05, cc = T, ES_cal = T)
+```
+
+- Since $r\sim N(0.05,0.0014)$,$r_{12}$ will $\sim N(0.6,12*0.0014)$
+
+- $VaR_{0.05}$ over the year
+```{r}
+risk(0.05, cc = T, mu_r = 0.6, sigma_r = 0.12 * sqrt(12))
+```
+
+- $VaR_{0.01}$ over the year
+```{r}
+risk(0.01, cc = T, mu_r = 0.6, sigma_r = 0.12 * sqrt(12))
+```
+
+- $ES_{0.05}$ over the year
+```{r}
+risk(0.05, cc = T, ES_cal = T, mu_r = 0.6, sigma_r = 0.12 * sqrt(12))
+
+```
+
+- $ES_{0.01}$ over the year
+```{r}
+risk(0.01, cc = T, ES_cal = T, mu_r = 0.6, sigma_r = 0.12 * sqrt(12))
+```
+
+## 6
+
+- $\chi^2$
+
+```{r}
+vals = seq(0, 10, 0.1)
+df2 = data.frame(vals, "chisq1" = dchisq(vals,1), "chisq2" = dchisq(vals,2), "chisq4" = dchisq(vals, 4), "chisq10" = dchisq(vals, 10))
+
+g2 = ggplot(df2)+
+  geom_line(aes(x = vals, y = chisq1,col = "chisq1",linetype = "chisq1"),size = 1)+
+  geom_line(aes(x = vals, y = chisq2,col = "chisq2",linetype = "chisq2"),size = 1)+
+  geom_line(aes(x = vals, y = chisq4,col = "chisq4",linetype = "chisq4"),size = 1)+
+  geom_line(aes(x = vals, y = chisq10,col = "chisq10",linetype = "chisq10"),size = 1)+
+  labs(col = "distribution")+
+  xlab("x")+
+  ylab("f(x)")+
+  ggtitle("Four chisqure-disritbuion curves") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+print(g2)
+```
+
+- $t$
+
+```{r}
+vals = seq(-3, 3, 0.1)
+df1 = data.frame(vals, "t1" = dt(vals,1), "t2" = dt(vals,2), "t4" = dt(vals, 4), "t10" = dt(vals, 10), "N" = dnorm(vals,0,1))
+
+g1 = ggplot(df1)+
+  geom_line(aes(x = vals, y = t1,col = "t1",linetype = "t1"),size = 1)+
+  geom_line(aes(x = vals, y = t2,col = "t2",linetype = "t2"),size = 1)+
+  geom_line(aes(x = vals, y = t4,col = "t4",linetype = "t4"),size = 1)+
+  geom_line(aes(x = vals, y = t10,col = "t10",linetype = "t10"),size = 1)+
+  geom_line(aes(x = vals, y = N, col = "N(0,1)",linetype = "N(0,1)"),size = 1)+
+  labs(col = "distribution")+
+  xlab("x")+
+  ylab("f(x)")+
+  ggtitle("Four t-disritbuion curves and Standard Normal Curve") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+print(g1)
+
+```
+
+- I expect that 5% VaR of t distribution with d.f 2 is larger in absolute values.
+
+## 7
+
+- Marginal Distribution of X and Y, E[X], VAR(X), SD(X), E[Y], VAR(Y) and SD(Y)
+
+$$
+f(X=x)= {\left\{\begin{matrix}
+ \frac{1}{8}&\ \ \ x=-1 \\ 
+ \frac{1}{4}&x=0 \\
+ \frac{1}{2}&x=1\\
+ \frac{1}{8}&x=2\\
+\end{matrix}\right.}{}
+$$
+
+$$
+f(Y=y)= {\left\{\begin{matrix}
+ \frac{3}{8}&\ \ \ y=-1 \\ 
+ \frac{5}{8}&y=1 
+\end{matrix}\right.}{}
+$$
+
+$$
+\begin{align*}
+E[X]&= \frac{1}{8} * (-1) + \frac{2}{8} * (0) +\frac{4}{8} * (1)+\frac{1}{8} * (2)=\frac{5}{8}\\ 
+E[Y]&= \frac{3}{8} * (-1) + \frac{5}{8} * (1) =  \frac{1}{4}\\
+VAR(X) & = \frac{1}{8}(-1-\frac{5}{8})^2 + \frac{2}{8}(0-\frac{5}{8})^2 + \frac{4}{8}(1-\frac{5}{8})^2+\frac{1}{8}(2-\frac{5}{8})^2\\
+&= \frac{47}{64}\\
+SD(X) &= \frac{\sqrt{47}}{8}\\
+VAR(Y) &= \frac{3}{8}(-1-\frac{1}{4})^2 + \frac{5}{8}(1-\frac{1}{4})^2\\
+&=\frac{15}{16}\\
+SD(Y) &= \frac{\sqrt{15}}{4}
+\end{align*}
+$$
+
+- COV(X,Y) and Corr(X,Y)
+$$
+\begin{align*}
+COV(X,Y)&=(-1-\frac{5}{8})(-1-\frac{1}{4})*\frac{1}{8}+(-1-\frac{5}{8})(1-\frac{1}{4})*0\\
+&+(0-\frac{5}{8})(-1-\frac{1}{4})*\frac{1}{8} + (0-\frac{5}{8})(1-\frac{1}{4})*\frac{1}{8}\\
+&+ (1-\frac{5}{8})(-1-\frac{1}{4})*\frac{1}{8} + (1-\frac{5}{8})(1-\frac{1}{4})*\frac{3}{8}\\
+&+ (2-\frac{5}{8})(-1-\frac{1}{4})*0 + (2-\frac{5}{8})(1-\frac{1}{4})*\frac{1}{8}\\
+&=\frac{15}{32}\\
+Corr(X,Y)&=\frac{COV(X,Y)}{SD(X)SD(Y)} = ({\frac{15}{47}})^{\frac{1}{2}}
+\end{align*}
+$$
+
+- X and Y are not depedent, becasue Corr(X,Y) is not equal to 0.
+
+- $f(X|Y=1)$ and $f(Y|X=2)$
+$$
+f(X=x|Y=1)= {\left\{\begin{matrix}
+ 0& \ \ \ x=-1 \\
+ \frac{1}{5}& x=0 \\ 
+ \frac{3}{5}&x=1 \\
+ \frac{1}{5}&x=2\\
+\end{matrix}\right.}{}
+$$
+$$
+f(Y=y|X=2)= {\left\{\begin{matrix}
+ 0&\ \ \ y=-1 \\ 
+ 1&y=1 \\
+\end{matrix}\right.}{}
+$$
+
+- E[X|Y=1], E[Y|X=2]
+
+$$
+\begin{align*}
+E[X|Y=1]&=\frac{1}{5} * (0) + \frac{3}{5} * (1) + \frac{1}{5} * (2)=1\\
+E[Y|X=2]&= 1 * 1 = 1
+\end{align*}
+$$
+
+- VAR(X|Y=1), VAR(Y|X=2)
+$$
+\begin{align*}
+VAR(X|Y=1) &= \frac{1}{5}(0-1)^2 + \frac{3}{5}(1-1)^2 + \frac{1}{5}(2-1)^2 = \frac{2}{5}\\
+VAR(Y|X=2) &= 0
+\end{align*}
+$$
+
+# 2 Part 2. R Exercises
+
+
+## Problem 1
+
+```{r}
+set.seed(46)
+X = rnorm(50000,0,1)
+P = sum(X>=0.5)/length(X)
+print(c("probability" = P))
+```
+
+## Problem 2
+
+```{r}
+# Denote H = 1, T = 0
+set.seed(46) # for reproductivity
+guess = rbinom(50000,1,0.5) # my guess
+friend = rbinom(50000,1,0.5) # friend's guess
+wealth = rep(0,50000)
+for (i in 1:50000){
+  if (guess[i] == friend[i] & guess[i] == 1){
+    wealth[i] = -3
+  } else if (guess[i] == friend[i] & guess[i] == 0) {
+      wealth[i] = -1
+  } else {
+    wealth[i] = 2
+  }
+}
+expectation = mean(wealth)
+expectation
+
+```
+
+## Problem 3
+
+```{r}
+set.seed(46) # for reproductivity
+guess = rbinom(50000,1,0.36) # my guess
+friend = rbinom(50000,1,0.5) # friend's guess
+wealth = rep(0,50000)
+for (i in 1:50000){
+  if (guess[i] == friend[i] & guess[i] == 1){
+    wealth[i] = -3
+  } else if (guess[i] == friend[i] & guess[i] == 0) {
+      wealth[i] = -1
+  } else {
+    wealth[i] = 2
+  }
+}
+expectation = mean(wealth)
+expectation
+```
+
+## Problem 4
+
+```{r}
+# we can write a function to get the expectation for different strategies of my friend.
+ex = function(p){
+  guess = rbinom(50000,1,0.36)
+  friend = rbinom(50000,1,p)
+  wealth = rep(0,50000)
+  for (i in 1:50000){
+    if (guess[i] == friend[i] & guess[i] == 1){
+      wealth[i] = -3
+    } else if (guess[i] == friend[i] & guess[i] == 0) {
+      wealth[i] = -1
+    } else {
+    wealth[i] = 2
+    }
+  }
+  expectation = mean(wealth)
+  return(expectation)
+}
+
+# we will try different strategies of my friend:
+p = seq(0,1,0.01)
+expect = rep(0,length(p))
+for (i in 1:length(p)) {
+  expect[i] = ex(p[i])
+}
+sum(expect<=0) # show whether there is a negative or 0 expectation.
+
+
+```
+

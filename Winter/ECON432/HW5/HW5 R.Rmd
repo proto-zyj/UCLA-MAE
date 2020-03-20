@@ -1,0 +1,199 @@
+---
+title: "ECON432 HW5 R Exercises"
+author: "YUANJIAN ZHOU"
+date: "Mar 10,2020"
+output:
+  html_document:
+    theme: united
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1
+```{r}
+library(PerformanceAnalytics)
+library(fGarch)
+library(tseries)
+library(car)
+library(quantmod)
+```
+
+## preparation
+```{r}
+get_price = function(tick) {
+  result = suppressWarnings(
+    get.hist.quote(
+      instrument = tick,
+      quote = "AdjClose",
+      provider = "yahoo",
+      start = "2000-01-03", 
+      end = "2014-02-21",     
+      compression = "m",
+      retclass = "zoo"
+    )
+  )
+  return(result)
+}
+GSPC = get_price("^GSPC")
+MSFT = get_price("MSFT")
+data_price = merge.zoo(GSPC, MSFT) # merge zoo objects with same index
+colnames(data_price) = c("GSPC", "MSFT")
+# change index to Month-Year format, like Mar 1995
+index(data_price) = as.yearmon(index(data_price), "%B%y")
+# rt = lnpt - lnpt-1
+data_ccreturn = diff(log(data_price))
+```
+
+# (a)
+```{r}
+plot(data_ccreturn,
+     main = "Monthly CC Return",
+     xlab = "time",
+     col = "purple")
+```
+
+- We can see that there is weak (or even no) time dependence, volatility clustering, and it seems both series have a lot of outliers. What'more, the series look like random walk.
+
+## (b)
+```{r}
+fourplots = function(tick) {
+  par(mfrow = c(2, 2))
+  data = data_ccreturn[, tick]
+  # return plot
+  plot(data,
+     main = "Monthly CC Return",
+     xlab = "time",
+     col = "purple")
+  
+  # acf
+  acf(data)
+  
+  # density plot
+  plot(
+    density(data),
+    type = "l",
+    main = "Denstiy Plot",
+    xlab = "monthly cc return",
+    ylab = "probability",
+    col = "purple"
+  )
+  
+  # qqplot
+  qqPlot( ~ data,
+          col = "purple",
+          ylab = "sample quantitles",
+          main = "QQ plot")
+}
+```
+
+- *MSFT*
+```{r}
+fourplots("MSFT")
+```
+
+- *GSPC*
+```{r}
+fourplots("GSPC")
+```
+
+- Both return eries do not look normally distributed.
+
+## (c)
+```{r}
+jarque.bera.test(data_ccreturn$GSPC)
+jarque.bera.test(data_ccreturn$MSFT)
+```
+
+- From the results, Jarque Bera Test refuses H0 that X is normally distributed for both series, that means they are not normally distributed.
+
+## (d)
+- *MSFT*
+```{r}
+garch_MSFT = garchFit(~garch(1,1), data = data_ccreturn$MSFT, trace = F)
+summary(garch_MSFT)
+```
+- $\alpha + \beta = 0.13 + 0.77 = 0.9$
+
+- *GSPC*
+```{r}
+garch_GSPC = garchFit(~garch(1,1), data = data_ccreturn$GSPC, trace = F)
+summary(garch_GSPC)
+```
+- $\alpha + \beta = 0.23 + 0.75 = 0.98$
+
+- Both series have a $\alpha + \beta \geq 0.9$, which means that both series has a very high persistence, the volatility clustering is very strong.
+
+## (e)
+- Using the summary table above:
+- *GSPC*
+```{r}
+# for alpha
+alpha_ci_95_l =  0.2308 - 1.96 * 7.527e-02
+alpha_ci_95_u =  0.2308 + 1.96 * 7.527e-02
+sprintf("95 percent confidence interval for alpha is [%f,%f]", alpha_ci_95_l, alpha_ci_95_u)
+
+# for beta
+beta_ci_95_l = 0.7549 - 1.96 * 7.014e-02
+beta_ci_95_u = 0.7549 + 1.96 * 7.014e-02
+sprintf("95 percent confidence interval for beta is [%f,%f]", beta_ci_95_l, beta_ci_95_u)
+
+```
+
+- *MSFT*
+```{r}
+# for alpha
+alpha_ci_95_l =  0.1332 - 1.96 * 0.0948
+alpha_ci_95_u =  0.1332 + 1.96 * 0.0948
+sprintf("95 percent confidence interval for alpha is [%f,%f]", alpha_ci_95_l, alpha_ci_95_u)
+
+# for beta
+beta_ci_95_l = 0.774 - 1.96 * 0.158
+beta_ci_95_u = 0.774 + 1.96 * 0.158
+sprintf("95 percent confidence interval for beta is [%f,%f]", beta_ci_95_l, beta_ci_95_u)
+
+```
+
+## (f)
+- Using the summary table above:
+- *GSPC*
+$$
+\begin{align*}
+H_0&: \alpha_1 = 0\\
+t  &= \frac{0.2308-0}{0.07527} \approx 3.066>1.96 = t_{0.975}
+\end{align*}
+$$
+
+- So we reject $H_0:\alpha_1 = 0$ with 95 % confidence.
+
+$$
+\begin{align*}
+H_0&: \beta_1 = 0.9\\
+t  &= \frac{0.7594-0.9}{0.07014} \approx -2<-1.96 = t_{0.025}
+\end{align*}
+$$
+
+- So we reject $H_0:\beta_1 = 0.9$ with 95 % confidence.
+
+- *MSFT*
+$$
+\begin{align*}
+H_0&: \alpha_1 = 0\\
+t  &= \frac{0.1332-0}{0.0948} \approx 1.41<1.96 = t_{0.975}
+\end{align*}
+$$
+
+- So we can not reject $H_0:\alpha_1 = 0$ with 95 % confidence.
+
+$$
+\begin{align*}
+H_0&: \beta_1 = 0.9\\
+t  &= \frac{0.774-0.9}{0.158} \approx -0.8>-1.96 = t_{0.025}
+\end{align*}
+$$
+
+- So we can not reject $H_0:\beta_1 = 0.9$ with 95 % confidence.

@@ -1,0 +1,282 @@
+---
+title: "Homework 3"
+author: "YUANJIAN ZHOU"
+date: "Feb 4,2020"
+output:
+  html_document: 
+    theme: united
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/zyj37/Desktop/MAE/Winter/ECON 433/Homework")
+library(mvtnorm)
+```
+
+# I Review Question
+
+## 1.
+
+- Expected value and variance of $\bar{Y}$
+$$
+\begin{align*}
+E(\bar{Y})&=E(\frac{1}{4}\sum_{t=1}^{4}Y_{t})=\frac{1}{4}E(\sum_{t=1}^{4}Y_{t})=\frac{1}{4}*4\mu=\mu\\
+    VAR(\bar{Y})&=VAR(\frac{1}{4}\sum_{t=1}^{4}Y_{t})=\frac{1}{16}VAR(\sum_{t=1}^{4}Y_{t})=\frac{1}{16}*4\sigma^2=\frac{1}{4}\sigma^2\\
+\end{align*}
+$$
+
+- Expected value and variance of W
+$$
+\begin{align*}
+E(W)&=E(\frac{1}{8}X_1+\frac{1}{8}X_2+\frac{1}{4}X_3+\frac{1}{2} X_4)\\
+&=(\frac{1}{8}+\frac{1}{8}+\frac{1}{4}+\frac{1}{2)}*\mu=\mu\\
+    VAR(W)&=VAR(\frac{1}{8}X_1+\frac{1}{8}X_2+\frac{1}{4}X_3+\frac{1}{2} X_4)\\
+&=(\frac{1}{64}+\frac{1}{64}+\frac{1}{16}+\frac{1}{4})*\sigma^2=\frac{11}{32}\sigma^2 \\
+\end{align*}
+$$
+
+- I prefer $\bar Y$, because W and $\bar Y$ are both unbiased, but $VAR(\bar Y) = \frac{1}{4}\sigma^2<VAR(W)=\frac{11}{32}\sigma^2$
+
+## 2.
+
+- Restriction
+$$
+\begin{align*}
+E(W_{a})&=E(\sum_{i=1}^{n}\alpha_{i}Y_{i})\\
+&=\sum_{i=1}^{n}\alpha_{i}*E(Y_{i})=\sum_{i=1}^{n}\alpha_{i}\mu\\
+\end{align*}
+$$
+- In order to make $W_{a}$ a unbiased estimator of $\mu$, we need $\sum_{i=1}^{n}\alpha_{i}=1$.
+
+- $VAR(W_{\alpha})$
+$$
+\begin{align*}
+VAR(W_{\alpha})&=VAR(\sum_{i=1}^{n}\alpha_{i}Y_{i})=\sum_{i=1}^{n}\alpha_{i}^{2}VAR(Y_{i})=\sum_{i=1}^{n}\alpha_{i}^{2} \sigma^2\\
+\end{align*}
+$$
+
+- We want to show that $\bar Y$ is the BLUE estimaor.
+
+1. Linear
+- Let the $\alpha_{i}$ in the class of linear estimator = $\frac{1}{n}$, we can get that $\bar Y$ belongs to the linear estimator.
+
+2. Unbiased
+$$
+\begin{align*}
+E(\bar{Y})&=E(\frac{1}{n}\sum_{i=1}^{n}Y_{i})=\frac{1}{n}E(\sum_{i=1}^{n}Y_{i})=\frac{1}{n}*n\mu=\mu\\
+\end{align*}
+$$
+
+3. Best(Efficient)
+
+$$
+\begin{align*}
+VAR(\bar{Y})&=VAR(\frac{1}{n}\sum_{i=1}^{n}Y_{i})=\frac{1}{n^2}VAR(\sum_{i=1}^{n}Y_{i})=\frac{1}{n^2}*n\sigma^2=\frac{1}{n}\sigma^2\\
+VAR(W_{\alpha})&=\sum_{i=1}^{n}\alpha_{i}^{2} \sigma^2\\
+\text{We restrict that} \sum_{i=1}^{n}\alpha_{i}&=1, \text{hence}\\
+VAR(\bar{Y})-VAR(W_{\alpha})&=\sigma^2(\frac{1}{n}-\sum_{i=1}^{n}\alpha_{i}^{2})
+\end{align*}
+$$
+
+- From the inequality, we know that $1\leq n\sum_{i=1}^{n}\alpha_{i}^{2}$, so $\frac{1}{n}\leq\sum_{i=1}^{n}\alpha_{i}^{2}$, hence $VAR(\bar{Y})\leq VAR(W_{\alpha})$
+
+- In all, $\bar Y$ is the BLUE estimator.
+
+## 3
+
+- 95% C.I for $\mu_{i},\sigma^2_{i}$
+$$
+\begin{align*}
+{C.I({\mu_1})} &= \hat{\mu_1} \pm\frac{\hat{\sigma_1}}{\sqrt{T}} * 1.96\\
+&= 0.01 \pm\frac{0.1}{\sqrt{100}} * 1.96 = [-0.0096,0.0296]\\
+{C.I({\mu_2})} &= \hat{\mu_2} \pm\frac{\hat{\sigma_2}}{\sqrt{T}} * 1.96\\
+&= -0.03 \pm\frac{0.3}{\sqrt{100}} * 1.96 = [-0.0888,0.0288]\\
+{C.I({\sigma^2_1})} &= \hat{\sigma_1}^2 \pm\frac{\sqrt{2}\hat{\sigma_1}^2}{\sqrt{T}} * 1.96\\
+&= 0.1^2 \pm\frac{\sqrt{2}*0.01}{\sqrt{100}} * 1.96 = [0.007,0.013]\\
+{C.I({\sigma^2_2})} &= \hat{\sigma_2}^2 \pm\frac{\sqrt{2}\hat{\sigma_2}^2}{\sqrt{T}}* 1.96\\
+&= 0.3^2 \pm\frac{\sqrt{2}*0.09}{\sqrt{100}}* 1.96 = [0.065,0.115]
+\end{align*}
+$$
+
+- 95% C.I for $\rho_{12}$
+
+
+$$
+\begin{align*}
+{C.I({\rho_{12}})} &= \hat{\rho_{12}} \pm\frac{1- \hat{\rho_{12}}^2}{\sqrt{T}} * 1.96\\
+&= 0.4 \pm\frac{1-0.16}{\sqrt{100}} * 1.96 = [0.235,0.565]
+\end{align*}
+$$
+
+- Hypothesis test for $\mu$
+$$
+\begin{align*} 
+H_0: \mu_{i} &= 0 \ vs \ H_1: \mu_{i} \neq 0\\
+t_1 &= \frac{0.01-0}{\frac{0.1}{\sqrt{100}}} = 1 <t_c=t_{0.95} = 1.96\\
+|t_2| &= \frac{-0.03-0}{\frac{0.3}{\sqrt{100}}} = |-1|=1 <t_c=t_{0.95}
+= 1.96
+\end{align*}
+$$
+
+- So we can not reject $H_{0}$ for both 1 and 2, expected returns of these assets are not statisitically different from 0.
+
+- Hypothesis test for $\sigma^2$
+$$
+\begin{align*} 
+H_0: \sigma^2_{i} &= 0.0225 \ vs \ H_1: \sigma^2_{i} \neq 0.0225\\
+|t_1| &= \frac{0.01-0.0225}{\frac{\sqrt{2}*0.01}{\sqrt{100}}} = |-8.84|=8.84 >t_c=t_{0.95} = 1.96\\
+t_2 &= \frac{0.09-0.0225}{\frac{\sqrt{2}*0.09}{\sqrt{100}}} =5.30 >t_c=t_{0.95}
+= 1.96
+\end{align*}
+$$
+
+- We reject $H_{0}$ for both 1 and 2.
+
+
+
+# II R Exercise
+
+## 1
+
+### (a)
+```{r}
+exercise = function(p){
+cov = p * 0.25 * 0.15
+covm = matrix(c(0.0625, cov, cov, 0.0225), ncol = 2, byrow = T)
+a = rmvnorm(100, mean = c(0.01, 0.05), sigma = covm)
+plot(a, xlab = "X", ylab = "Y", main = (paste("Bivariate Normal with correlation ", p)))
+p = pmvnorm(lower = c(-Inf, -Inf), upper = c(0,0), mean = c(0.01,0.05), sigma = covm)
+sprintf("joint probability P(X<=0,Y<=0)=%#.3f", p)
+}
+exercise(0.99)
+```
+
+- It has a positive strong linear association
+
+### (b)
+```{r}
+exercise(0.9)
+```
+
+- It has a positive strong linear association, weaker than when $\rho = 0.99$.
+
+### (c)
+```{r}
+exercise(0.5)
+```
+
+- It has a positive not so strong linear association, weaker than when $\rho = 0.9$.
+
+### (d)
+```{r}
+exercise(0)
+```
+- It has no linear association.
+
+### (e)
+```{r}
+exercise(-0.9)
+```
+- It has a negative strong linear association, weaker than when $\rho = 0.99$.
+
+## 2
+
+### (a)
+```{r}
+atleast = rep(0, 100000) # numbers of trials
+set.seed(46)
+for (i in 1:100000) {
+  r <- rnorm(45, mean = .05 / 253,
+             sd = .23 / sqrt(253))
+  W <- 1e6 * exp(cumsum(r)) # wealth for each day
+  atleast[i] <- any(W <= 950000) # check
+}
+sprintf("the probability that the value of the stock will be below $950,000 at the close of at least one of the next 45 trading days is %#.3f", mean(atleast))
+```
+
+### (b)
+```{r}
+bigprofit =rep(0,100000)
+set.seed(46)
+for (i in 1 : 100000) {
+  r <- rnorm(45, mean = .05 / 253,
+             sd = .23/ sqrt(253))
+  W <- 1e6 * exp(cumsum(r))
+  bigprofit[i] <- ifelse(as.numeric(any(W <= 950000)) == 1, 0, W[45])
+}
+sprintf("the probability that the hedge fund will make a prot of at least $100,000 is %#.4f", mean(bigprofit > 1.1e6))
+```
+
+
+### (c)
+```{r}
+#c
+loss <- rep(0, 100000)
+wipe <- rep(0, 100000)
+loss_atend <- rep(0,100000)
+for (i in 1:100000) {
+  r <- rnorm(45, mean = .05 / 253,
+             sd = .23/ sqrt(253))
+  W <- 1e6 * exp(cumsum(r))
+  wipe[i] <- any(W <= 950000) # wipe out
+  loss_atend[i] <- (W[45] < 1e6) # at day 45 W is less than 950000
+  loss[i] <- wipe[i] | loss_atend[i]
+}
+sprintf("the probability the hedge fund will suffer a loss is %#.3f",mean(loss)
+)
+```
+
+### (d)
+```{r}
+Profit <- rep(0, 100000)
+Price <- rep(0, 100000)
+wipe_point <- rep(0, 100000)
+set.seed(46)
+for (i in 1 : 100000) {
+  r <- rnorm(45, mean = .05 / 253,
+             sd = .23/ sqrt(253))
+  W <- 1e6 * exp(cumsum(r))
+    if(any(W <= 950000) == 1){
+    wipe_point[i] <- which(W <= 950000)[1] # if wipe out, find the date of wipping out
+    Price[i] <- W[wipe_point[i]]
+  }
+  else {
+    Price[i] <- W[45] # if not wipe out, wealth on day 45
+  }
+}  
+
+Profit <- Price - 950000 - 50000 # profit = price - cost - borrow
+sprintf("the expected profit from this trading strategy is %#3.f", mean(Profit))
+```
+
+### (e)
+```{r}
+cc_mean <- rep(0, 100000)
+wipe_point2 <- rep(0, 100000)
+simple_return <- rep(0, 100000)
+for (i in 1 : 100000) {
+  r <- rnorm(45, mean = .05 / 253,
+             sd = .23/ sqrt(253))
+  r_cumsum <- cumsum(r)
+  if(any(r_cumsum <= -0.05) == 1){ # wipe out
+    wipe_point2[i] <- which(r_cumsum <= -0.05)[1] # the day where wipe out
+    simple_return[i] <- (exp(r_cumsum[wipe_point2[i]]) * 1e6 - 1e6) / 50000 # calculate simple return of 45 days
+    if((wipe_point2[i] != 0) & (simple_return[i] >= -1)){ # loss does not go over 50000
+      cc_mean[i] <- log(1 + simple_return[i]) / wipe_point2[i]
+    }
+    else if((wipe_point2[i] != 0) & (simple_return[i] < -1)) # loss go over 50000
+      cc_mean[i] <- -log(abs((exp(r_cumsum[wipe_point2[i]]) * 1e6 - 1e6) / 50000)) / wipe_point2[i]
+    
+    # if wipe out the average return is the average between day 1 and the day that wipe out
+  }
+  else {
+    simple_return[i] <- (exp(r_cumsum[45]) * 1e6 - 1e6) / 50000
+    cc_mean[i] <- log(1 + simple_return[i]) / 45
+# if not, the average return is the aeverage over 45 days
+  }
+}
+sprintf("the expected averaging return is %#.3f", mean(cc_mean))
+
+```
+
