@@ -1,0 +1,277 @@
+---
+title: "Problem Set 1:fixed income securities"
+author: "YUANJIAN ZHOU"
+date: "Jan 24,2020"
+# date: '`r format(Sys.Date(), "%Y-%b-%d")`'
+output: 
+  html_document:
+    toc: TRUE
+    #number_sections: TRUE
+    theme: united
+    #highlight: tango
+  pdf_document: 
+    latex_engine: xelatex
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/zyj37/Desktop/MAE/Winter/ECON 433/Homework")
+library(tidyverse)
+```
+
+- Appreciate Mr. Julian for the instruction of problem 5.
+
+
+# 1.
+
+## (a)
+
+$$
+PV_a = \frac{C}{r}(1-\frac{1}{(1+r)^{T}})=\frac{100}{0.03}(1-\frac{1}{(1.03)^{5}})\approx457.9707
+$$
+
+```{r}
+print(100/0.03*(1-1/(1.03**5)))
+```
+
+## (b)
+
+$$
+PV_b = \frac{100}{1.03^6}+\cdots=\frac{C}{r}-\frac{100}{0.03}(1-\frac{1}{(1.03)^{5}})=\frac{100}{0.03}-457.9707\approx2875.363
+$$
+
+```{r}
+print(100/0.03-457.9707)
+```
+
+## (c)
+
+$$
+PV_c = \frac{C}{r}=\frac{100}{0.03} \approx 3333.33
+$$
+
+```{r}
+print(100/0.03)
+```
+
+## (d)
+
+Approximately,
+$$
+PV_a + PV_b = PV_c
+$$
+
+- It is because in (b) we just calculate the price of a perpetuity which does not pay in the first 5 years, and in (a) we calculate the present value for payment in the first years, so the present value in (c) is just the price of the perpetuity.
+
+# 2.
+
+$$
+\begin{aligned}
+1100 &= \sum^{8}_{k=1}\frac{1000*5\%*0.5}{(1+0.5y)^k}+\frac{1000}{(1+0.5y)^8}\\
+     &=\frac{25}{0.5y}(1-\frac{1}{(1+0.5y)^8})+\frac{1000}{(1+0.5y)^8}\\
+    y&\approx2.365\%
+\end{aligned}
+$$
+
+# 3.
+
+## (a)
+
+$$
+PV_L = \frac{1000000}{1.01^{15}}\approx861349.47
+$$
+
+## (b)
+
+- In order to get immunization, we need to calculate the duration of the portfolio.
+$$
+D_L * 861149.47 = D_A * A\\
+15 * 861349.47 = D_A * 861349.47\\
+D_A = 15
+$$
+
+- Then we can calculate the weight of these two bonds.
+$$
+2 * x + 20 (1-x) = 15\\
+x\approx0.278\\
+A_2 =861349.47 * 0.278 \approx 239455.15\\
+A_{20} = 861349.47 * 0.722 \approx621894.32
+$$
+
+- We buy **239455.15** 2 year zero coupon bond, **621894.32** 20 year zero coupon bond.
+
+## (c)
+
+
+$$
+\begin{align*}
+\Delta L_{appro} &= -L * \frac{D_L}{1+y} * \Delta y \\
+                 &= -861349.47 * \frac{15}{1+0.01}*0.0025\\&\approx-31980.8\\
+              
+\Delta A_{appro} &= -A * \frac{D_A}{1+y} * \Delta y \\
+                 &= -861349.47 * \frac{15}{1+0.01}*0.0025\\&\approx-31980.8
+\end{align*}
+$$
+
+
+$$
+\begin{aligned}
+\Delta L_{exact}&= L*\frac{1.01^{15}}{1.0125^{15}} - L\\
+&\approx -31356.3\\
+\Delta A_{exact} &\approx A_{20}*\frac{1.01^{20}}{1.0125^{20}}-A_{20}+\\
+&A_{2}*\frac{1.01^{2}}{1.0125^{2}}-A_{2}\\
+&\approx-31182.05
+\end{aligned}
+$$
+
+## (d)
+
+There is no change in liability.
+
+$$
+\begin{aligned}
+\Delta A_{30,appro} &= -A* \frac{D_A}{1+y}*\Delta y\\
+&=-A*\frac{30}{1.01}*0.0025\\
+                 &\approx -63961.59\\
+\Delta A_{30,exact}&= A_{30}*\frac{1.01^{30}}{1.0125^{30}}-A_{30}\\
+&\approx-61571.11\\
+\end{aligned}
+$$
+
+- The difference is because 30 year zero coupon has a longer duration, so it is more sensitive to the change in interest rate.
+
+# 4
+
+## (a)
+
+- It is upward slopping because ceteris paribus, longer time to maturity bond has a larger YTM.
+
+## (b)
+
+- According to expectation hypothesis:
+
+$$
+(1+r_{0,2})^2 = E[(1+r_{0,1})*(1+r_{1,1})]\\
+1.1^2 = 1.08* E[r_{1,1}]\\
+E[r_{1,1}] \approx 0.12 
+$$
+
+## (c)
+
+$$
+[(1.08)(1.06)]^\frac{1}{2} \approx 1.07 < 1+r_{0,2}
+$$
+
+- So the investor will buy a two year zero coupon bond, for it has a higher annual YTM.
+
+## (d)
+
+- According to the expectation hypothesis, the equilibrium will be broken, and in order to achieve the equilibrium again, $r_{0,2}$ has to decrease. The new $r_{0,2}$ will be:
+
+$$
+1+r_{0,2} = E[(1+r_{0,1})(1+r_{1,1})]^\frac{1}{2} = (1.08*1.06)^\frac{1}{2}\approx1.07 \\
+r_{0,2} \approx 0.07 < r_{0,1}
+$$
+
+- This time the term structure will be downward slopping, because ceteris paribus, YTM will decrease when time to maturity increases.
+
+# 5.
+
+# (a) (b) (c)
+
+- Details in the excel file.
+
+# (d)
+
+```{r include=FALSE}
+# Load packages
+library(readxl)
+library(Rsolnp)
+library(optimbase)
+```
+
+```{r}
+# Load Data
+setwd("C:/Users/zyj37/Desktop/MAE/Winter/ECON 433/Homework")
+data = read_excel("BondQuotes.xlsx")
+
+# create relevant columns
+coupon = as.matrix(data[1:19, 2])
+datespayout = as.matrix(t(data[1:59, 8]))
+maturity = as.matrix(data[1:19, 6])
+accruedinterest = as.matrix(data[1:19, 5] / 182 * coupon / 2)
+price_obs = as.matrix((data[1:19, 3] + data[1:19, 4])/2 + accruedinterest)
+
+# function
+fn = function(x) {
+  # print the parameters
+  print(x)
+  
+  # get the parameters
+  a1 = x[1]
+  a2 = x[2]
+  a3 = x[3]
+  
+  # this is a matrix with the difference btw maturity and dates of payout
+  daysmatrix = maturity %*% ones(1,dim(datespayout)[2]) - ones(dim(maturity)[1],1) %*% datespayout  
+
+
+  # time to payout in terms of years
+  timetopayout = datespayout / 365
+  
+  # compute the discount rate
+  discountrate = a1 * timetopayout + a2 * timetopayout^2 + a3 * timetopayout^3
+  
+  # price ZCB
+  priceZCB =  exp(-discountrate * timetopayout)
+  
+  # payment matrix
+  daysmatrix[daysmatrix < 0] = NA
+  paymentbydaysmatrix = (daysmatrix == 0) * 100 + 0.5 * coupon %*% ones(1, dim(datespayout)[2]) 
+  paymentbydaysmatrix[is.na(paymentbydaysmatrix)] = 0
+  
+  # times the price computed with the discount factor, 2 means column-wise
+  paymentbydaysmatrix_d = sweep(paymentbydaysmatrix, MARGIN = 2, as.matrix(priceZCB),FUN = "*" )
+  
+  
+  # estimated price
+  PVestimate = rowSums(paymentbydaysmatrix_d)
+  
+  # squared errors
+  sqrterrors = (price_obs - PVestimate)^2
+  sqrterrors = sum(sqrterrors)
+  
+}
+```
+
+
+```{r}
+# upper and lower bounds
+bmax1 = 0.01
+bmax2 = 0.001
+bmax3 = 0.001
+ub1 = c(bmax1, bmax2, bmax3)
+lb1 = - ub1
+
+# initial values
+x0 = c(0.0015, -0.00006, 0.0000009)
+solnp_result = solnp(x0, fn, LB = lb1, UB = ub1)
+```
+
+
+```{r}
+# plot
+p1 = solnp_result[["pars"]][1]
+p2 = solnp_result[["pars"]][2]
+p3 = solnp_result[["pars"]][3]
+
+t = seq(0, 29, 0.001)
+plot(t, p1 * t + p2 * t^2 + p3 * t^3,
+    main = "The Yield Curve",
+    ylab = "Yield", xlab = "Years", xlim = c(0, 29),
+    ylim = c(0, 0.03))
+```
+
+
+
