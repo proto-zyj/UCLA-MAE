@@ -1,0 +1,702 @@
+---
+title: "Homework 2"
+author: "YuanJian Zhou"
+date: "Oct 25 2019"
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+    toc: yes
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 1
+
+## Import necessary packages
+
+```{r,message = FALSE}
+library(tidyverse) # for ggplot
+library(car) # for EDA plots
+library(corrplot) # for correlation plots
+library(leaps) # for subset regression
+library(lmtest) # for ramsey test
+library(DAAG) # for cross-validation
+library(gridExtra) # for combination of ggplots
+library(broom) # better output
+library(MASS) # for stepAIC
+library(multcomp) # for glht
+library(emmeans) # for ANOVA
+library(effects) 
+```
+## Import data
+
+```{r}
+setwd("C:/Users/zyj37/Desktop/MAE/ECON 430")
+h = read.csv("Homework/2/heart.csv")
+names(h) = c("age","sex","chest_pain","bps","chol",
+             "bloodsugar","ecg","max_heartrate","exercise_angina","oldpeak",
+             "slope","n_major_vessel","thal","target")
+h2 = h # keep the original dataset unchanged
+```
+
+## Clean the data and change category variables to factor ones
+```{r}
+# The following codes are based on the data description on the UCI website and the comment named "The ultimate guide to this dataset" on the commment column of this dataset on the Kaggle.
+h2 = subset(h2,(h2$n_major_vessel!=4 & h2$thal!=0))
+h2 = h2 %>% 
+  mutate(sex_f = factor(sex,labels =c("female","male")),
+         chest_pain_f = factor(chest_pain,levels=c(0,2,1,3),
+         labels=c("Asymptomatic","Non_Angina","Atypical_Angina","Typical_Angina")),
+         bloodsugar_f = factor(bloodsugar,labels=c("<120",">120")),
+         ecg_f = factor(ecg,levels=c(0,1,2),labels=c("Left_Hypertrophy","Normal","Abnormality")),
+         exercise_angina_f = factor(exercise_angina,labels=c("No","Yes")),
+         slope_f = factor(slope,levels=c(2,1,0),
+                          labels=c("Up","Flat","Down")),
+         thal_f = factor(thal,levels=c(2,1,3),
+                         labels=c("Normal","Fix","Reversable")),
+         n_major_vessel_f = factor(n_major_vessel),
+         target_f = factor(target,labels=c("Yes","No")))
+```
+
+## (a)
+
+### Five numbers summary
+```{r}
+summary(h2[,-c(2,3,6,7,9,11,12,13,14)])
+```
+
+- We can see the summaries for each variable. I just refer to several of these.The mean of the age is about 54 years old with a maxmium of 77 and a minimum of 29; The composition of sex is a little unbalanced; Some of these variables are so technical that I can not understand the meaning even after googling.
+
+### Explorary Descriptive Analysis for each variable
+
+#### Age
+```{r,message = FALSE}
+par(mfrow=c(2,2))
+age_hist = hist(h2$age,freq=F,breaks="FD",main="Histogram of Age",col="lightseagreen",xlab="age")
+densityPlot(~age,data=h2,main="Density Plot of Age",col="lightseagreen")
+qqPlot(h2$age,main="Quantile Plot of Age",id=F)
+Boxplot(~age,data=h2,main="Boxplot of Age",id=F)
+```
+
+- We can see from these graphs that the variable is not so bad in normality. One problem is that it has two relative peaks. From the boxplot we can know that there are no outliers and it looks symmetric.
+
+#### bps
+```{r}
+par(mfrow=c(2,2))
+bps_hist = hist(h2$bps,freq=F,breaks="FD",main="Histogram of Bps",col="lightseagreen",xlab="bps")
+densityPlot(~bps,data=h2,main="Density Plot of Bps",col="lightseagreen")
+qqPlot(h2$bps,main="Quantile Plot of Bps",id=F)
+Boxplot(~bps,data=h2,main="Boxplot of Bps")
+```
+
+- We can see from the histogram that the varible is not so well normally distributed and the density plot shows that it is  skewed. From the quantitle plot and boxplot we can know that there are a lot of outliers, while the problem we want to figure out is that whether they have heart disease, so may be these outliers are useful since people with higher bps will be more likely to get a heart disease.
+
+#### chol
+```{r,message=FALSE}
+par(mfrow=c(2,2))
+chol_hist = hist(h2$chol,freq=F,breaks="FD",main="Histogram of Chol",col="lightseagreen",xlab="Chol")
+densityPlot(~chol,data=h2,main="Density Plot of Chol",col="lightseagreen")
+qqPlot(h2$chol,main="Quantile Plot of Chol",id=F)
+Boxplot(~chol,data=h2,main="Boxplot of Chol",id=F)
+```
+
+- Histogram of this variable looks so well, but the other three ones shows that there are a lot of outliers with relative big values, comments of these are as above.
+
+#### oldpeak
+```{r}
+par(mfrow=c(2,2))
+oldpeak_hist = hist(h2$oldpeak,freq=F,breaks="FD",main="Histogram of Oldpeak",col="lightseagreen")
+densityPlot(~oldpeak,data=h2,main="Density Plot of Oldpeak",col="lightseagreen")
+qqPlot(h2$oldpeak,main="Quantile Plot of Oldpeak",id=F)
+Boxplot(~oldpeak,data=h2,main="Boxplot of Oldpeak",id=F)
+```
+
+- Every graph of these graphs looks not so good, I think it is becasue the range of it is relatively small and it has too many 0 values. So it is not normally distributed and have lots of outliers.
+
+#### max_heartrate
+```{r}
+par(mfrow=c(2,2))
+hist_max_heartrate = hist(h2$max_heartrate,freq=F,breaks="FD",main="Histogram of Max Heartrate",col="lightseagreen")
+densityPlot(~max_heartrate,data=h2,main="Density Plot of Max Heartrate",col="lightseagreen")
+qqPlot(h2$max_heartrate,main="Quantile Plot of Max Heartrate",id=F)
+Boxplot(~max_heartrate,data=h2,main="Boxplot of Max Heartrate",id=F)
+```
+
+- This variable is distrbuted not so bad. The main problem is that it's  skewed, but the quantile plot and boxplot look quite well.
+
+#### category variables
+```{r}
+## sex
+g1 = ggplot(h2,aes(sex_f,fill=target_f))+
+  geom_bar()+
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of Sex")+
+  theme(plot.title = element_text(hjust = 0.5))
+## chest_pain
+g2 = ggplot(h2,aes(x =chest_pain_f,fill=target_f)) + 
+  geom_bar()+  
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of Chest Pain")+
+  theme(plot.title = element_text(hjust = 0.5))
+## blood sugar
+g3 = ggplot(h2,aes(x =bloodsugar_f,fill=target_f)) + 
+  geom_bar()+  
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of Blood Sugar")+
+  theme(plot.title = element_text(hjust = 0.5))
+## ecg
+g4 = ggplot(h2,aes(x =ecg_f,fill=target_f)) + 
+  geom_bar()+  
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of ECG")+
+  theme(plot.title = element_text(hjust = 0.5))
+## exercise_angina 
+g5 = ggplot(h2,aes(x =exercise_angina_f,fill=target_f)) + 
+  geom_bar()+  
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of Exercise Angina")+
+  theme(plot.title = element_text(hjust = 0.5))
+## slope
+g6 = ggplot(h2,aes(x =slope_f,fill=target_f)) + 
+  geom_bar()+  
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of Slope")+
+  theme(plot.title = element_text(hjust = 0.5))
+## n_major_vessel
+g7 = ggplot(h2,aes(x =n_major_vessel_f,fill=target_f)) + 
+  geom_bar()+  
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of Numbers of Major Vessel")+
+  theme(plot.title = element_text(hjust = 0.5))
+## thal
+g8 = ggplot(h2,aes(x =thal_f,fill=target_f)) + 
+  geom_bar()+  
+  geom_text(stat = "count",aes(label =..count..),position=position_stack(0.5))+
+  theme_classic()+
+  ggtitle("Barplot of Numbers of Thal")+
+  theme(plot.title = element_text(hjust = 0.5))
+## target
+g9 = ggplot(h2,aes(x=target_f)) + 
+  geom_bar(aes(fill=target_f)) +
+  geom_text(stat ='count',aes(label=..count..),vjust=-0.5)+
+  theme_classic()+
+  ggtitle("Barplot of Target")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(g1,g3)
+grid.arrange(g5,g6)
+grid.arrange(g7,g8)
+grid.arrange(g2,g4)
+grid.arrange(g9)
+```
+
+- We can see all the category variables and the composition of them. We can roughly find that males are more likely to get a heart disease. And we can also look other disease indicators, unluckliy I do not understand what they means even after googling. What makes me confused is that the graph shows that a asymptomatic person is more likely to get a heart disease, it looks so weird, but the original dataset also shows this pattern.
+
+- Besides, the composition of whether having a heart disease is well balanced in this dataset.
+
+### Correlation Plots
+```{r}
+# Since correlation plots do not work for factor variables, we used the orginal dataset.
+par(mfrow=c(1,1))
+corrplot(cor(h))
+```
+
+- Mainly we have to see the correlation between target and other variables, and what we find is that chest pain, max heartrate and slope are relatively highly related to target.
+
+- We also find the possibility of multi-coolinearity that can be tested formally in the following content.
+
+### Scatter Plot
+```{r,message=FALSE}
+#Since our dependent variables are 0-1 variables, the scatter plot does not make much sense. Anyway, I draw it. Since scatterplot matrix of 14 variables looks too weird, I print target and continuous ones.
+scatterplotMatrix(data=h,~target+max_heartrate+age+oldpeak+chol+bps)
+```
+
+- As you can see, this really does not make much sense.
+
+## (b)
+
+### Transformation with yj Power
+```{r}
+#we can use the yjPower transformation
+t_yj = powerTransform(data=h2,cbind(age,max_heartrate,bps,chol,oldpeak)~1.,family="yjPower")
+h2_yj = yjPower(with(h2, cbind(age,max_heartrate,bps,chol,oldpeak)), coef(t_yj,round=T))
+colnames(h2_yj) = c("age_t","max_heartrate_t","bps_t","chol_t","oldpeak_t")
+h2 = h2 %>% cbind(h2_yj)
+```
+
+### Verification for linearity
+- Then we see the component residual plot to verify the linearity.
+```{r}
+reg_for_linearity = lm(target~age_t+max_heartrate_t+bps_t+chol_t+
+                    oldpeak_t+sex_f+chest_pain_f+bloodsugar_f
+                    +ecg_f+exercise_angina_f+slope_f+thal_f+
+                      n_major_vessel_f,data=h2)
+crPlots(reg_for_linearity,terms = ~age_t+max_heartrate_t+bps_t+chol_t+
+          oldpeak_t)
+```
+
+- We can see that it seems that the linearity work for all continuous variables, but we have to verify them formally.
+```{r}
+suppressWarnings(boxTidwell(target~age_t+max_heartrate_t+bps_t+chol_t,other.x = ~sex_f + chest_pain_f + bloodsugar_f+ ecg_f + exercise_angina_f + slope_f + n_major_vessel_f +thal_f +oldpeak_t,data=h2))
+```
+
+- We can see that the p value is very big for each variable, so it means that we can not reject the null hypothesis that we do not need a further transformation. 
+- So we can conclude that the transformation suggested with yjPower above is a suitable one.
+
+## (c)
+### Basic Multiple Regression
+```{r}
+# we have to determine the baseline for each factor variable.
+h2$ecg_f <- relevel(h2$ecg_f, "Normal")
+
+reg_basal = lm(target~age+chol+bps+max_heartrate+oldpeak+
+                 sex_f+chest_pain_f+exercise_angina_f+ecg_f+slope_f+
+                 bloodsugar_f+n_major_vessel_f+thal_f,data=h2)
+summary(reg_basal)
+```
+
+### Interpretation of estimates
+- I just want to discuss the significant ones. 
+- The coefficient of the sex_male means that averagely men are about 16% more possible to get a heart disease than woman
+- The coeffient of the different levels of chest pain seems weird because of the reason I mentioned above, but it means that if you have angina, you will be less likely to get a heartdisease by seperately 21%, 15%, 25%. 
+- The other statistically significant variables are hard to explain, but after googling at least I know they make sense. 
+- The coefficient of slope_flat and slope_down means that if this some kinds of slope is nearly 0  or negative, you will be separetely 13% and 7% more likely to get a heart disease. 
+- The coefficient of n_major vessel shows that if the number of major vessels are 1 or 2 or 3, the possibility of getting a heart disease will separately increase about 26%, 34% and 29%.
+- The coefficient of thal_fReversable means that if in a thal test there shows a reversable defect, the probability of getting a heart disease will increase 21%.
+
+## (d)
+
+### Test for outliers
+- We draw the quantile plot, cook distance and residuals ve leverage plots to see vividly whethere there is an outlier.
+```{r}
+plot(reg_basal,which = c(2,4,5))
+```
+
+- From the graph, we have several potential outliers, then we validate them formally with outlier test. 
+```{r}
+outlierTest(reg_basal)
+```
+
+- As we can see from the results, there are no significant outliers in the model.
+
+## (e)
+
+### Best Subset Regression with Backward Method
+- We run a subset regression to get the candidate models. Since if a factor varible have n levels, it will enter the regression with three indicator varibles, totally we have 20 variables. It takes too long to do the exhaustive subset regression, so we use a backward method.
+- And if we want get every candidate models, we should let $$nbest=\binom{20}{11}=184756$$. While it takes too much time, so we just let nbest = 1000.
+```{r}
+reg_subset = suppressWarnings(regsubsets(target~n_major_vessel_f+thal_f+slope_f+exercise_angina_f+ecg_f+bloodsugar_f+chest_pain_f+sex_f+age+bps+chol+max_heartrate+oldpeak,method=c("backward"),nbest=1000,nvmax=20,data=h2))
+reg_subset_s = summary(reg_subset)
+```
+
+- Then we try to get the regression with the smallest cp and draw the plot of cp.
+```{r}
+plot(reg_subset_s$cp, ylab = "Cp", type = "l")
+cp_min = which.min(reg_subset_s$cp)
+points(cp_min, reg_subset_s$cp[cp_min], col = "red", cex = 2, pch = 20)
+cp_min = which.min(reg_subset_s$cp)
+print(cp_min)
+```
+
+- So we extract No.63 regression model.
+```{r}
+coeff_63 = coef(reg_subset,63)
+print(coeff_63)
+# Since we have just one level of thal and slope, we have to get the indicator variable by ourself.
+h2 = h2 %>% 
+  mutate(thal_Reversable = ifelse(thal_f=="Reversable",1,0),
+         slope_flat = ifelse(slope_f=="Flat",1,0)
+                  )
+reg_subset_best = lm(target~n_major_vessel_f+thal_Reversable+slope_flat+
+                       exercise_angina_f+chest_pain_f+sex_f+bps+
+                       max_heartrate+oldpeak,data=h2)
+```
+
+### Test of Multi-coolinearity
+- Then we test the multi-coolinearity of this model.
+```{r}
+tidy(vif(reg_subset_best))
+```
+
+- We can see that none of the independent variables has a VIF over 4, so we can conclude that there does not exist collinearity.
+
+## (f)
+
+### Respective Residuals vs X 
+```{r}
+residualPlots(reg_basal)
+```
+
+- We can see that the residual plots for continuous variable looks not so bad.
+The constant variation almost holds, but with chol,bps and oldpeak, the value of x is too concentrated.
+
+### Y vs fitted value of Y
+
+```{r}
+plot(jitter(h2$target),jitter(reg_basal$fitted.values))
+abline(0,1,col="red")
+```
+
+- We draw the picture of y and $\hat{y}$. As we all know, the y is a 0-1 variable, the $\hat{y}$ is a continuous variable, so it looks quite weird and it is an inevitable result.
+
+## (g)
+
+### Mulitiple Regression with Transformed Independent Variables
+```{r}
+reg_robust = lm(target~age_t+chol_t+bps_t+max_heartrate_t+oldpeak_t
+   +sex_f+chest_pain_f+bloodsugar_f+ecg_f+exercise_angina_f
+   +slope_f+thal_f+n_major_vessel_f,data=h2)
+residualPlots(reg_robust)
+```
+
+- From the residual plots, we can not see there are no significant improvements when using this model, but the problem of over-concentration of x is a little improved.
+```{r}
+plot(jitter(h2$target),jitter(reg_robust$fitted.values))
+abline(0,1,col="red")
+```
+
+- The plot is as same as before, but I do not think it makes any sense.
+
+### Comparison with AIC and BIC
+- Then we compare this two models with AIC and BIC.
+```{r}
+AIC(reg_basal,reg_robust)
+BIC(reg_basal,reg_robust)
+```
+
+- These two criterions all suggest that the model in (b) is better.
+
+## (h)
+
+### Multiple Regression with Interaction Terms
+- I think that sex may have a interaction term with other variables.
+```{r}
+reg_interaction = update(reg_basal,.~.+sex_f:max_heartrate+sex_f:bps+sex_f:chol+sex_f:oldpeak+sex_f:age,data=h2)
+summary(reg_interaction)
+```
+
+### Comparison with AIC and BIC
+- From the results, we can see that interaction terms work not so good, then we compare it with our basal model with AIC and BIC.
+```{r}
+AIC(reg_basal,reg_interaction,reg_robust)
+BIC(reg_basal,reg_interaction,reg_robust)
+```
+
+- The basal model is really good compared to the model with interaction terms and the robust model.
+
+### Test for Adding Higher Power Form
+- Then we test whether there should be a higher power form.
+```{r}
+resettest(reg_basal , power=2, type="regressor")
+resettest(reg_basal , power=3, type="regressor")
+```
+
+- Normally we consider for quadratic and cubic forms, the results show that we do not need them.
+
+## (i)
+
+### Model selection
+- We do not take our best subset model into consideration. Now we compare it with our basal model.
+```{r}
+AIC(reg_basal,reg_subset_best)
+BIC(reg_basal,reg_subset_best)
+```
+
+- So finally I will choose the best subset model to do the cross validation.
+
+### 5-Fold Cross Validation
+```{r}
+cv_results = CVlm(data=h2,reg_subset_best,m=5,plotit=T,printit=T)
+```
+
+- As we know before, because of our dependent variable is 0-1 variable, the graph will look quite weird. But we can get the MSE for each fold and the cv error for this model. The MSE for each fold is seperately 0.15, 0.11, 0.13 0.12, 0.09. The CV error is as follows.
+```{r}
+attr(cv_results,"ms")
+```
+
+- And we can see that the 5 fitted lines are near to each other, proving that our results are robust.
+
+
+# Question 2
+## Import necessary packages
+```{r,message=FALSE}
+library(tidyverse) # for ggplot
+library(car) # for EDA plots
+library(leaps) # for subset regression
+library(lmtest) # for ramsey test
+library(MASS) # for stepAIC
+library(multcomp) # for glht
+library(corrplot)
+library(emmeans) # for ANOVA
+library(broom)
+library(effects)
+```
+
+## Import data
+```{r}
+setwd("C:/Users/zyj37/Desktop/MAE/ECON 430")
+hc = read.csv("Homework/2/healthcare.csv")
+```
+
+## Clean data and generate some useful variables
+
+### Deal With Missing Values
+
+- We drop "TI" and "HSAT" due to explanation, aggregate the year variables to only one indicating whether the obsevation is after 1987. .
+```{r}
+hc2 = hc
+drops = c("TI","HSAT","YEAR1984","YEAR1985","YEAR1986","YEAR1987","YEAR1988","YEAR1991","YEAR1994")
+hc2 = hc2[,!(names(hc2) %in% drops)]
+hc2$TIME = ifelse(hc2$YEAR>1987,1,0)
+hc2=subset(hc2,select=-YEAR)
+hc2_omit = na.omit(hc2)
+(nrow(hc2)-nrow(hc2_omit))/nrow(hc2)
+```
+
+- We can see that the missing values take up a very small part of the dateset,so we can just remove them.
+
+```{r}
+hc2= na.omit(hc2)
+```
+
+## (a)
+- First, since we have so many variables, we use VIF to delete some variables. Then we use subset regression that uses adjusted R-square, Cp, AIC and BIC as the criterion to get our candidates. 
+```{r}
+reg_whole = lm(data=hc2,DOCVIS~.)
+tidy(vif(reg_whole))
+reg_whole = update(reg_whole,.~.-ID-HAUPTS-ABITUR-WORKING,data=hc2) # VIF>10
+tidy(vif(reg_whole)) 
+reg_whole = update(reg_whole,.~.-WHITEC,data=hc2) # VIF>4
+tidy(vif(reg_whole))
+reg_whole = update(reg_whole,.~.-HHNINC,data=hc2) # VIF>4
+tidy(vif(reg_whole))
+reg_subset = regsubsets(formula(reg_whole),method="exhaustive",nbest=40,data=hc2)
+reg_subset_s = summary(reg_subset)
+which.max(reg_subset_s$adjr2)
+which.min(reg_subset_s$bic)
+which.min(reg_subset_s$cp)
+coef(reg_subset,268)
+reg_basal = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+
+                 NEWHSAT+TIME,data=hc2)
+```
+
+- Then we try to test whether there are unusual observations.
+```{r}
+# outlier
+qqPlot(reg_basal,id=list(n=3))
+## 4429 7193 and 7194 are potential outliers
+outlierTest(reg_basal)
+## 7193 7194 4429 11200 16382 7822 596 19133 15484 22952 are tested outliers
+
+# leverage
+influenceIndexPlot(reg_basal,id=list(n=3),vars="hat") 
+## 1682 2742 11706 are leverages
+
+# influence
+influenceIndexPlot(reg_basal,id=list(n=3),vars="cook") 
+## 1682 2742 7193 are influences.
+
+# Depict the influence
+influencePlot(reg_basal)
+AIC(reg_basal)
+```
+
+- In all, we will try to delete these observations and compare this model to the basic model.
+```{r}
+reg_nounusal =update(reg_basal,subset=-c(7193,7194,4429,11200,16382,
+                                         7822,19133,15484,596,22952,
+                                        25976,25981,1682,2742,11706))
+AIC(reg_nounusal,reg_basal)
+BIC(reg_nounusal,reg_basal)
+```
+
+- We can see that the model deleting the unusual observations are better. Then we try to test the multi-coolinearity.
+
+```{r}
+coef(reg_nounusal)
+corrplot(cor(hc2[,c("FEMALE","HANDPER","HOSPVIS","DOCTOR","HEALTHY",
+"HOSPITAL","TIME","NEWHSAT")]))
+vif(reg_nounusal)
+```
+
+- From the correlation plot and the VIF values we suggest that HEALTHY and NEWHSAT maybe highly correlated. We remove one of it and see whether there is improvement.
+
+```{r}
+reg_nomc1 = update(reg_nounusal,.~.-HEALTHY,data=hc2)
+reg_nomc2 = update(reg_nounusal,.~.-NEWHSAT,data=hc2)
+AIC(reg_nomc1,reg_nomc2,reg_nounusal)
+BIC(reg_nomc1,reg_nomc2,reg_nounusal)
+```
+
+-We find that removing these terms do not make the resutls better. Then we try the transformation.
+```{r,warning=FALSE}
+t = powerTransform(with(hc2,cbind(HANDPER,HOSPVIS,NEWHSAT))~1,family="yjPower")
+t_s = yjPower(with(hc2, cbind(HANDPER,HOSPVIS,NEWHSAT)),coef(t,round=TRUE))
+hc3 = cbind(hc2,t_s)
+reg_trans = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+
+                 NEWHSAT+TIME,data=hc3)
+AIC(reg_trans,reg_nounusal)
+BIC(reg_trans,reg_nounusal)
+```
+
+- The AIC and BIC show that we do not need the transform.
+- The component residual plots also show that there is a linearity relationship between dependent variables and continuous independent variables. Then we use a resettest to decide if we need to add a higher degree polynomial.
+```{r}
+resettest(reg_nounusal,power=2,type="regressor")
+resettest(reg_nounusal,power=3,type="regressor")
+```
+
+- According to the ramsey RESET test, we need to add a higher degree polynomial. 
+```{r}
+coef(reg_nounusal)
+reg_inter2 = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+TIME+I(HOSPVIS^2),data=hc2)
+summary(reg_inter2)
+reg_inter3 = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+TIME+I(NEWHSAT^2),data=hc2)
+summary(reg_inter3)
+reg_inter4 = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+TIME+I(HANDPER^2)+I(HOSPVIS^2),data=hc2)
+summary(reg_inter4)
+reg_inter5 = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+TIME+I(HANDPER^2)+I(NEWHSAT^2),data=hc2)
+summary(reg_inter5)
+reg_inter6 = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+TIME+I(HOSPVIS^2)+I(NEWHSAT^2),data=hc2)
+summary(reg_inter6)
+reg_inter7 = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+TIME+I(HANDPER^2)+I(HOSPVIS^2)+I(NEWHSAT^2),data=hc2)
+summary(reg_inter7)
+
+# all the quadratic terms will either be insignificant or make others insignificant.
+```
+
+- Then we do a manual way to choose our 10 variables, since we want to keep the main effect variables, so I use the manual backward way.
+```{r}
+coef(reg_nounusal)
+reg_candidate = lm(DOCVIS~(FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+TIME)^2,data=hc2)
+summary(reg_candidate)
+reg_candidate = update(reg_candidate,.~.-HOSPVIS:HOSPITAL) # remove perfect multicoolinearity
+summary(reg_candidate)
+reg_candidate = update(reg_candidate,.~.-FEMALE:HOSPVIS-FEMALE:HEALTHY-FEMALE:HOSPITAL-FEMALE:NEWHSAT-FEMALE:TIME-HANDPER:HEALTHY-HANDPER:HOSPITAL-HANDPER:TIME-HOSPVIS:DOCTOR-HOSPVIS:HEALTHY-HOSPVIS:NEWHSAT-DOCTOR:HEALTHY-HEALTH:HOSPITAL-HEALTHY:TIME-HOSPITAL:TIME-NEWHSAT:TIME,data=hc2) # remove insignificant variables
+summary(reg_candidate)
+reg_candidate = update(reg_candidate,.~.-FEMALE:DOCTOR-FEMALE:HANDPER) # remove interactions with female to keep female significant
+summary(reg_candidate)
+reg_final = regsubsets(formula(reg_candidate),nvmax=15,nbest=1000,method="backward",data=hc2)
+reg_final_s = summary(reg_final)
+which.min(reg_final_s$cp)
+coef(reg_final,91)
+reg_final = lm(DOCVIS~FEMALE+HANDPER+HOSPVIS+DOCTOR+HEALTHY+HOSPITAL+NEWHSAT+HANDPER:DOCTOR+HANDPER:NEWHSAT+HOSPVIS:TIME+DOCTOR:HOSPITAL+DOCTOR:NEWHSAT+DOCTOR:TIME+HEALTHY:NEWHSAT+HOSPITAL:NEWHSAT,data=hc2)
+summary(reg_final)
+reg_final = update(reg_final,.~.-HOSPVIS:TIME-DOCTOR:TIME,data=hc2)
+summary(reg_final)
+reg_final_1 = update(reg_final,.~.-HANDPER:NEWHSAT,data=hc2)
+summary(reg_final_1) # insignificant
+reg_final_2 = update(reg_final,.~.-HANDPER:DOCTOR,data=hc2)
+summary(reg_final_2) # insignificant
+reg_final_3 = update(reg_final,.~.-DOCTOR:HOSPITAL,data=hc2)
+summary(reg_final_3) # 0.2993
+reg_final_4= update(reg_final,.~.-DOCTOR:NEWHSAT,data=hc2)
+summary(reg_final_4) # 0.2906
+reg_final_5= update(reg_final,.~.-HEALTHY:NEWHSAT,data=hc2)
+summary(reg_final_5) # insignificant
+reg_final_6= update(reg_final,.~.-HOSPITAL:NEWHSAT,data=hc2)
+summary(reg_final_6) # insignificant
+AIC(reg_final_3,reg_final_4)
+BIC(reg_final_3,reg_final_4)
+```
+
+- We successfully to remove 1 variable, then we try to remove another.
+```{r}
+reg_final_3_1 = update(reg_final_3,.~.-HANDPER:DOCTOR,data=hc2)
+summary(reg_final_3_1) #insignificant
+reg_final_3_2 = update(reg_final_3,.~.-HANDPER:NEWHSAT,data=hc2)
+summary(reg_final_3_2) #insignificant
+reg_final_3_3 = update(reg_final_3,.~.-DOCTOR:NEWHSAT,data=hc2)
+summary(reg_final_3_3) 
+reg_final_3_4 = update(reg_final_3,.~.-HEALTHY:NEWHSAT,data=hc2)
+summary(reg_final_3_4) #insignificant
+reg_final_3_5 = update(reg_final_3,.~.-HOSPITAL:NEWHSAT,data=hc2)
+summary(reg_final_3_5)
+AIC(reg_final_3_3,reg_final_3_5)
+BIC(reg_final_3_3,reg_final_3_5)
+```
+
+- We successfully to remove 1 variable again, then we try to remove another variable.
+```{r}
+reg_final_3_5_1 = update(reg_final_3_5,.~.-HANDPER:DOCTOR,data=hc2)
+summary(reg_final_3_5_1) # insignificant
+reg_final_3_5_2 = update(reg_final_3_5,.~.-HANDPER:NEWHSAT,data=hc2)
+summary(reg_final_3_5_2) # insignificant
+reg_final_3_5_3 = update(reg_final_3_5,.~.-DOCTOR:NEWHSAT,data=hc2)
+summary(reg_final_3_5_3) 
+reg_final_3_5_4 = update(reg_final_3_5,.~.-HEALTHY:NEWHSAT,data=hc2)
+summary(reg_final_3_5_4) # insignificant
+reg_final_3_5_5 = update(reg_final_3_5,.~.-HOSPITAL:NEWHSAT,data=hc2)
+summary(reg_final_3_5_5)
+AIC(reg_final_3_5_3,reg_final_3_5_5)
+BIC(reg_final_3_5_3,reg_final_3_5_5)
+```
+
+- We successfully to remove 1 variable again, then we try to remove the last one to keep 10 variables in.
+```{r}
+reg_final_3_5_5_1 = update(reg_final_3_5_5,.~.-HANDPER:DOCTOR,data=hc2)
+summary(reg_final_3_5_5_1) # insignificant
+reg_final_3_5_5_2 = update(reg_final_3_5_5,.~.-HANDPER:NEWHSAT,data=hc2)
+summary(reg_final_3_5_5_2) # insignificant
+reg_final_3_5_5_3 = update(reg_final_3_5_5,.~.-DOCTOR:NEWHSAT,data=hc2)
+summary(reg_final_3_5_5_3) 
+reg_final_3_5_5_4 = update(reg_final_3_5_5,.~.-HEALTHY:NEWHSAT,data=hc2)
+summary(reg_final_3_5_5_4) # insignificant
+```
+```{r}
+reg_final = reg_final_3_5_5_3
+summary(reg_final)
+```
+
+- Since we at most can have 10 predictors, this model is our final model.
+- Our final model have a adjusted R-square 28.56%, I just interpret some of these.
+- The number of visiting doctors will increase if a person is a female or if she has seen a doctor or gone to the hospital before.
+- The number of visting doctors will decrease if he or she  is healthy.
+
+## (b)
+
+```{r}
+lm_did_female = update(reg_final,.~.-FEMALE+FEMALE*TIME,data=hc2)
+summary(lm_did_female)
+```
+
+```{r}
+lm_did_unemployed = update(reg_final,.~.+UNEMPLOY*TIME,data=hc2)
+summary(lm_did_unemployed)
+```
+
+- From the results above, we can see at a 1% significant level, neither does the policy work for women, nor does it work for the unemployed.
+
+## (c)
+- We do the ANOVA, and our null hypothesis is $\beta_{FEMALE} \leq 0$
+```{r}
+hc2$FEMALE.F = as.factor(hc2$FEMALE)
+anv = lm(DOCVIS~FEMALE.F,data=hc2)
+summary(anv)
+emmeans(anv,trt.vs.ctrl~FEMALE.F)
+plot(effect("FEMALE.F",anv))
+```
+- From the linear regression form of anova, the estiamted marginal means and the effect plot, we all can know that the number of doctor visits a patient has over a 3 month period is greater for women than for men. 
+
+## (d)
+- I want to test that if a woman is healthy, the number of visiting doctors will decrease 3. That's to say our null hypothesis is $\lambda=1*\beta_{HEALTHY}+1*\beta_{FEMALE}=-6$
+```{r}
+glht = glht(reg_final,linfct =c("1*FEMALE+1*HEALTHY=-6"))
+summary(glht)
+confint(glht)
+```
+
+- I can not reject the null hypothesis, and it means that we can not deny that if a woman is healthy, the number of visiting doctors will decrease 6. And the interval estimate shows that -6 is in the confidence interval. 

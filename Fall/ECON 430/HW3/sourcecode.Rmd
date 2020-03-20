@@ -1,0 +1,197 @@
+---
+title: "Homework 3"
+author: "Yuanjian Zhou"
+date: "Nov 22nd 2019"
+output:
+  word_document:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+---
+
+```{r eval=FALSE}
+# Load necessary packages
+library(tidyverse)
+library(forecast)
+library(broom)
+```
+
+```{r eval=FALSE}
+# Import data into R:
+setwd("C:/Users/zyj37/Desktop/MAE/ECON 430/Homework/3")
+to = read.csv("tourism_income.csv",header=F)
+
+# Convert data to time series format:
+to_income  = ts(to[,2],freq=12,start=2001)
+
+# Generate the time dummy variables
+t = seq(2001,2019.75,length=length(to_income))
+```
+
+```{r eval=FALSE}
+# Plot the original data
+autoplot(to_income,col="purple")+
+  ylab("Million dollars")+
+  ggtitle("Monthly Tourism Income in India")+
+  theme_classic()
+```
+
+```{r eval=FALSE}
+# Draw ACF and PACF plot
+tsdisplay(to_income,col="purple")
+```
+
+```{r eval=FALSE}
+par(mfrow=c(2,1))
+# Linear Fit 
+m1 = lm(to_income~t)
+# Plot the original time series plot with linear fit
+plot(to_income,xlab="Time",ylab="Monthly Tourism Income in India",
+     main = "Linear Fit")
+lines(t,m1$fitted.values,col="purple",lwd=2)
+
+# Quadratic Periodic Fit
+t2 = t^2
+m2 = lm(to_income~t+t2)
+# Plot the original time series plot with Quadratic periodic fit
+plot(to_income,xlab="Time",ylab="Monthly Tourism Income in India",
+     main = "Quadratic Fit")
+lines(t,m2$fitted.values,col="purple",lwd=2)
+
+# Draw them in the same plot
+plot(to_income,xlab="Time",ylab="Monthly Tourism Income in India",
+     main = "Comparison")
+lines(t,m1$fitted.values,col="purple",lwd=2)
+lines(t,m2$fitted.values,col="red",lwd=2)
+```
+
+```{r eval=FALSE}
+par(mfrow=c(2,1))
+
+# plot the residuals vs. fitted values for model 1.
+plot(m1$fitted.values,main = "Linear Fit",col="purple",type ="l")
+plot(m1$residuals,main = "Linear Fit Residual",col="purple",type="l")
+```
+
+```{r eval=FALSE}
+# set the output of graphs
+par(mfrow=c(2,1))
+
+# plot the residuals vs. fitted values for model 2.
+plot(m2$fitted.values,main = "Quadratic Fit",col="purple",type ="l")
+plot(m2$residuals,main = "Quadratic Fit Residual",col="purple",type="l")
+```
+
+
+```{r eval=FALSE}
+par(mfrow=c(2,1))
+
+# plot the histograms of residuals
+hist(m1$residuals,breaks="FD",col="purple",main="Residuals of Linear Fit")
+hist(m2$residuals,breaks="FD",col="purple",main="Residuals of Quadratic Fit")
+```
+
+
+```{r eval=FALSE}
+# Summary statistics of m1
+s_m1 = summary(m1)
+s_m1
+# Summary statistics of m2
+s_m2 = summary(m2)
+s_m2
+```
+
+
+```{r eval=FALSE}
+# use AIC and BIC to select models.
+AIC(m1,m2)
+BIC(m1,m2)
+```
+
+```{r eval=FALSE}
+# Perform forecast and draw the plot
+
+# generate our data frame for forecast
+tn=data.frame(t=seq(2019.75,2022.75,length.out=36))
+tn = tn %>% 
+  mutate(t2 = t^2)
+
+# perform forecast and draw the plot
+pred_m2 = predict(m2,tn,interval="prediction")
+matplot(tn$t,pred_m2,lty=c(1,3,3),col=c("black","purple","purple"), type="l", lwd=2, ylab="predicted y",xlab="Time")
+```
+
+```{r eval=FALSE}
+# run the regression with fully season dummies.
+m3 = tslm(to_income ~ season+0)
+summary(m3)
+```
+
+```{r eval=FALSE}
+# plot estimated seasonal factors 
+plot(m3$coefficients,type='l',ylab='Seasonal Factors', xlab="Season",lwd=2, main="Plot of Seasonal Factors",col="purple")
+```
+
+```{r eval=FALSE}
+# Run the full model
+t2=t^2
+m_full = tslm(to_income~t+season+t2)
+```
+
+```{r eval=FALSE}
+# Plot the fitted values vs. residuals of full model
+par(mfrow=c(2,1))
+plot(m_full$fitted.values,
+     main = "Full model fit",col="purple")
+plot(m_full$residuals,
+     main = "Full model fit residuals",col="purple")
+```
+
+
+```{r eval=FALSE}
+# Get summary statistic and error metrics of the model.
+summary(m_full)
+accuracy(m_full)
+```
+
+
+```{r eval=FALSE}
+# Generate the prediction data frame
+df = data.frame(seasonaldummy(to_income,h=36))
+df = df %>% 
+  mutate(t =seq(2019.75,2022.75,length.out=36)) %>%
+  mutate(t2=t^2)
+
+# Plot the forecast
+plot(forecast(m_full,df))
+```
+
+```{r eval=FALSE}
+# perfrom the "mstl" function which is a improved version of stl
+mstl(to_income,s.window = "periodic") %>%
+  autoplot()
+to_income_stl = stl(to_income,s.window = "periodic")
+```
+
+```{r eval=FALSE}
+# function for seasonal adjustment
+to_income_seasadj = seasadj(to_income_stl)
+```
+
+```{r eval=FALSE}
+# draw the seasonal adjusted plot and the fitted line 
+autoplot(to_income_seasadj,col="purple")+
+  ylab("Million dollars")+
+  ggtitle("Monthly Tourism Income in India:Seasonal Adjusted")+
+  theme_classic()
+```
+```{r eval=FALSE}
+plot(to_income_seasadj,xlab="Time",ylab="Monthly Tourism Income in India",
+     main = "Quadratic Fit:Seasonal adjusted")
+lines(t,m2$fitted.values,col="purple",lwd=2)
+```
+
+
